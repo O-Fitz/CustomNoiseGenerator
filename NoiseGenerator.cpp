@@ -1,33 +1,10 @@
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <math.h>
-#include <numeric>
-#include <random>
+#include "src/include.h"
+
+RANDOM randomGen(time(0));
 
 
 struct Vectormap {
     std::vector<std::vector<std::vector<double>>> vectormap;
-};
-
-class RANDOM {
-private:
-    std::default_random_engine generator;
-public:
-    double randomDoubleRange(double lower, double upper) {
-        std::uniform_real_distribution<double> distribution(lower, upper);
-        return distribution(generator);
-    }
-
-    int randomIntRange(int lower, int upper) {
-        std::uniform_int_distribution<int> distribution(lower, upper);
-        return distribution(generator);
-    }
-
-    int randomNegative() {
-        int ran[2] = { -1, 1 };
-        return ran[this->randomIntRange(0, 1)];
-    }
 };
 
 
@@ -43,7 +20,7 @@ double getMean(std::vector<std::vector<double>> map) {
 
 Vectormap createVecMap(int order, int vec_size=1) {
     Vectormap vec;
-    RANDOM randomGen;
+    RANDOM randomGen(time(0));
     for (int x = 0; x < order; x++) {
         std::vector<std::vector<double>> dim;
         for (int y = 0; y < order; y++) {
@@ -82,6 +59,7 @@ std::vector<std::vector<double>> createEmptyMap(int size, double filler = 1) {
 
 std::vector<std::vector<double>> postProcess(std::vector<std::vector<double>> map) {
     double mean = getMean(map);
+    std::cout << mean << std::endl;
     std::vector<std::vector<double>> map2;
     for (int x = 0; x < map.size(); x++) {
         map2.push_back({});
@@ -89,6 +67,25 @@ std::vector<std::vector<double>> postProcess(std::vector<std::vector<double>> ma
             map2[x].push_back(abs(map[x][y] - mean));
         }
     }
+    double max = map[0][0];
+    //std::cout << max << std::endl;
+    for (auto const & row : map){
+        double m = row.max_size();
+        if (m > 5*mean){
+            m == max;
+        }
+        else if (m > max){
+            //std::cout << m;
+            max = m;
+        }
+    }
+    std::cout << max << std::endl;
+    for (int x = 0; x<map.size(); x++){
+        for (int y = 0; y<map.size(); y++){
+            map2[x][y] = map2[x][y]/max;
+        }
+    }
+    
     return map2;
 }
 
@@ -98,7 +95,7 @@ std::vector<std::vector<double>> Slope(int size, int depth = 1) {
         std::vector<double> row;
         for (int y = 0; y < size; y++) {
             double n =  (size-abs(x - double(size)/2) - abs(y - double(size) / 2) / size);
-            std::cout << x << " " << y << " " << n << std::endl;
+            //std::cout << x << " " << y << " " << n << std::endl;
            row.push_back(n);
         }
         map.push_back(row);
@@ -125,7 +122,6 @@ std::vector<std::vector<double>> createNoise(int order, int range = 10, std::vec
     Vectormap vec = createVecMap(order, vector_size);
 
     double n;
-    RANDOM randomGen;
 
     for (int x = 0; x < order; x++) {
         std::vector<double> row;
@@ -160,8 +156,8 @@ std::vector<std::vector<double>> createNoise(int order, int range = 10, std::vec
     noise_map = (vectorItemMult(weightmap, noise_map));
     noise_map = postProcess(noise_map);
 
-    //return noise_map;
-    return Slope(order);
+    return noise_map;
+    //return Slope(order);
 }
 
 
@@ -182,13 +178,20 @@ bool writeToFile(std::vector<std::vector<double>> map) {
     return false;
 }
 
-int main()
+int main(int argc, char** argv)
 {
-    int order = 75;
+    
+
+    std::string str_order = argv[1];
+
+    //std::cout << str_order << std::endl;
+
+    int order = stoi(str_order);
+    //int order = 5;
+
     Vectormap v = createVecMap(order);
     std::vector<std::string> weights = { "SLOPE" };
-    std::vector<std::vector<double>> map = createNoise(order, 15);
-    std::cout << "DONE\n";
-    std::cout << writeToFile(map);
+    std::vector<std::vector<double>> map = createNoise(order, 20);
+    writeToFile(map);
 }
 

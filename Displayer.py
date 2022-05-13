@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pylab as plt
 import subprocess as sub
+import sys
 
 def getNoiseMap(filename="field.txt"):
     data_from_file = []
@@ -17,7 +18,7 @@ def getNoiseMap(filename="field.txt"):
         else:
             if itemNo == length-1:
                 lineNo += 1
-                itemNo = 0
+                itemNo = -1
             if lineNo == length:
                 break
             #print(lineNo, itemNo)
@@ -25,11 +26,14 @@ def getNoiseMap(filename="field.txt"):
         itemNo += 1
     return data
 
+if __name__ == "__main__":
 
-#o = sub.call("Debug/NoiseGenerator.exe")
-#o.wait()
-#noise = getNoiseMap("Debug/field.txt")
-noise = getNoiseMap("field.txt")
-plt.imshow(noise, cmap=plt.cm.gray, interpolation='none')
-plt.colorbar()
-plt.show()
+    try:
+        order = int(sys.argv[1])
+    except IndexError:
+        order = int(input("Order: "))
+    o = sub.run(["NoiseGenerator.exe", str(order)])
+    noise = getNoiseMap("field.txt")
+    plt.imshow(noise, cmap=plt.cm.gray, interpolation='none')
+    plt.colorbar()
+    plt.show()
