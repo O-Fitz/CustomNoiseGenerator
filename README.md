@@ -25,7 +25,7 @@
   - You will need to compile the c++ scripts NoiseGenerator.cpp and RANDOM.cpp
  
   - Using g++, it would look like:
-      g++ -o NoiseGenerator NoiseGenerator.cpp RANDOM.cpp
+      - g++ -o NoiseGenerator NoiseGenerator.cpp RANDOM.cpp
  
   - In the Displayer.py python file, remove the .exe ending to the running of the executable on line 31.
   - Run the Displayer.py python file.
