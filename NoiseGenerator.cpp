@@ -1,14 +1,25 @@
 #include "src/include.h"
 
+
+// RandomGenerator
 RANDOM randomGen(time(0));
 
+// Main function
+int main(int argc, char** argv)
+{
+    std::string str_order = argv[1];
+    int order = stoi(str_order);
 
-struct Vectormap {
-    std::vector<std::vector<std::vector<double>>> vectormap;
-};
+    std::vector<std::string> weights = {};
+    Map map = createNoise(order, 20, weights=weights);
+    //Map map = Slope(order, 20);
+    //std::cout << map[0][-1];
+    writeToFile(map);
+}
 
 
-double getMean(std::vector<std::vector<double>> map) {
+// Defining Functions/Procedures
+double getMean(Map map) {
     double sum = 0;
     for (auto& x : map) {
         for (auto& y : x) {
@@ -18,7 +29,7 @@ double getMean(std::vector<std::vector<double>> map) {
     return sum/(map.size()*map.size());
 }
 
-Vectormap createVecMap(int order, int vec_size=1) {
+Vectormap createVecMap(int order, int vec_size) {
     Vectormap vec;
     RANDOM randomGen(time(0));
     for (int x = 0; x < order; x++) {
@@ -29,7 +40,7 @@ Vectormap createVecMap(int order, int vec_size=1) {
             std::vector<double> f = { f1, f2 };
             dim.push_back(f);
         }
-        vec.vectormap.push_back(dim);
+        vec.push_back(dim);
     }
     return vec;
 }
@@ -45,8 +56,8 @@ double dotProduct(std::vector<double> v1, std::vector<double> v2) {
     return sum;
 }
 
-std::vector<std::vector<double>> createEmptyMap(int size, double filler = 1) {
-    std::vector<std::vector<double>> zeromap;
+Map createEmptyMap(int size, double filler) {
+    Map zeromap;
     std::vector<double> row;
     for (int y = 0; y < size; y++) {
         row.push_back(filler);
@@ -57,10 +68,9 @@ std::vector<std::vector<double>> createEmptyMap(int size, double filler = 1) {
     return zeromap;
 }
 
-std::vector<std::vector<double>> postProcess(std::vector<std::vector<double>> map) {
+Map postProcess(Map map) {
     double mean = getMean(map);
-    std::cout << mean << std::endl;
-    std::vector<std::vector<double>> map2;
+    Map map2;
     for (int x = 0; x < map.size(); x++) {
         map2.push_back({});
         for (int y = 0; y < map.size(); y++) {
@@ -68,18 +78,15 @@ std::vector<std::vector<double>> postProcess(std::vector<std::vector<double>> ma
         }
     }
     double max = map[0][0];
-    //std::cout << max << std::endl;
     for (auto const & row : map){
         double m = row.max_size();
         if (m > 5*mean){
             m == max;
         }
         else if (m > max){
-            //std::cout << m;
             max = m;
         }
     }
-    std::cout << max << std::endl;
     for (int x = 0; x<map.size(); x++){
         for (int y = 0; y<map.size(); y++){
             map2[x][y] = map2[x][y]/max;
@@ -89,26 +96,31 @@ std::vector<std::vector<double>> postProcess(std::vector<std::vector<double>> ma
     return map2;
 }
 
-std::vector<std::vector<double>> Slope(int size, int depth = 1) {
-    std::vector<std::vector<double>> map;
+Map Slope(int size, int depth) {
+    Map map;
     for (int x = 0; x < size; x++) {
         std::vector<double> row;
         for (int y = 0; y < size; y++) {
             double n =  (size-abs(x - double(size)/2) - abs(y - double(size) / 2) / size);
-            //std::cout << x << " " << y << " " << n << std::endl;
-           row.push_back(n);
+            if (x == 1 && y == 1){
+                std::cout << n << std::endl;
+                std::cout << abs(x - double(size)/2) << std::endl;
+                std::cout << abs(y - double(size) / 2) << std::endl;
+                n = size/3;
+            }
+            row.push_back(n);
         }
         map.push_back(row);
     }
     return map;
 }
 
-std::vector<std::vector<double>> vectorItemMult(std::vector<std::vector<double>> vec1, std::vector<std::vector<double>> vec2, double scalar = 1) {
+Map vectorItemMult(Map vec1, Map vec2, double scalar) {
     if (vec1.size() != vec2.size() || vec1[0].size() != vec2[0].size()) {
         std::cout << "VECTORS ARENT SAME SIZE";
         return createEmptyMap(vec1.size(), 0);
     }
-    std::vector<std::vector<double>> vecproduct = createEmptyMap(vec1.size());
+    Map vecproduct = createEmptyMap(vec1.size());
     for (int x = 0; x < vec1.size(); x++) {
         for (int y = 0; y < vec2.size(); y++) {
             vecproduct[x][y] = vec1[x][y] * vec2[x][y] * scalar;
@@ -117,8 +129,8 @@ std::vector<std::vector<double>> vectorItemMult(std::vector<std::vector<double>>
     return vecproduct;
 }
 
-std::vector<std::vector<double>> createNoise(int order, int range = 10, std::vector<std::string> weights = {}, int vector_size = 1) {
-    std::vector<std::vector<double>> noise_map;
+Map createNoise(int order, int range, std::vector<std::string> weights, int vector_size) {
+    Map noise_map;
     Vectormap vec = createVecMap(order, vector_size);
 
     double n;
@@ -133,10 +145,10 @@ std::vector<std::vector<double>> createNoise(int order, int range = 10, std::vec
                         double f1 = randomGen.randomDoubleRange(-vector_size, vector_size);
                         double f2 = sqrt(pow(vector_size, 2) - pow(f1, 2))*randomGen.randomNegative();
                         std::vector<double> f = { f1, f2 };
-                        n += vector_size * 0.5 - 1 *dotProduct(f, vec.vectormap[x][y]);
+                        n += vector_size * 0.5 - 1 *dotProduct(f, vec[x][y]);
                     }
                     else{
-                        n += vector_size * 0.5 - 1 * dotProduct(vec.vectormap[x][y], vec.vectormap[(x+i)][(y+j)]);
+                        n += vector_size * 0.5 - 1 * dotProduct(vec[x][y], vec[(x+i)][(y+j)]);
                     }
                 }
             }
@@ -144,9 +156,10 @@ std::vector<std::vector<double>> createNoise(int order, int range = 10, std::vec
         }
         noise_map.push_back(row);
     }
-    std::vector<std::vector<double>> weightmap = createEmptyMap(order, 1.0);
-    for (auto& i : weights) {
-        if (i == "SLOPE") {
+    Map weightmap = createEmptyMap(order, 1.0);
+    for (auto& tag : weights) {
+        // ADD WEIGHTMAP STATEMENTS HERE:
+        if (tag == "SLOPE") {
             weightmap = vectorItemMult(weightmap, Slope(order));
         }
         else {
@@ -157,12 +170,10 @@ std::vector<std::vector<double>> createNoise(int order, int range = 10, std::vec
     noise_map = postProcess(noise_map);
 
     return noise_map;
-    //return Slope(order);
 }
 
 
-
-bool writeToFile(std::vector<std::vector<double>> map) {
+bool writeToFile(Map map) {
     std::ofstream file;
     file.open("field.txt");
     file << map.size() << "\n";
@@ -177,21 +188,3 @@ bool writeToFile(std::vector<std::vector<double>> map) {
     }
     return false;
 }
-
-int main(int argc, char** argv)
-{
-    
-
-    std::string str_order = argv[1];
-
-    //std::cout << str_order << std::endl;
-
-    int order = stoi(str_order);
-    //int order = 5;
-
-    Vectormap v = createVecMap(order);
-    std::vector<std::string> weights = { "SLOPE" };
-    std::vector<std::vector<double>> map = createNoise(order, 20);
-    writeToFile(map);
-}
-

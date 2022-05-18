@@ -18,7 +18,7 @@ def getNoiseMap(filename="field.txt"):
         else:
             if itemNo == length-1:
                 lineNo += 1
-                itemNo = -1
+                itemNo = 0
             if lineNo == length:
                 break
             #print(lineNo, itemNo)
@@ -34,6 +34,9 @@ if __name__ == "__main__":
         order = int(input("Order: "))
     o = sub.run(["NoiseGenerator.exe", str(order)])
     noise = getNoiseMap("field.txt")
-    plt.imshow(noise, cmap=plt.cm.gray, interpolation='none')
+    plt.imshow(noise, cmap=plt.cm.gray)
+    #plt.size()
+    plt.xlim([-1, order-1])
+    plt.ylim([-1, order])
     plt.colorbar()
     plt.show()
