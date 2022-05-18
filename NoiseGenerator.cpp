@@ -1,8 +1,16 @@
 #include "src/include.h"
 
+// Structs def
+struct ThreadingStore{
+    std::vector<double> row;
+    int index;
+};
 
-// RandomGenerator
+// Gloabls
 RANDOM randomGen(time(0));
+std::vector<ThreadingStore> threadingstore;
+std::mutex myMutex;
+
 
 // Main function
 int main(int argc, char** argv)
@@ -10,8 +18,8 @@ int main(int argc, char** argv)
     std::string str_order = argv[1];
     int order = stoi(str_order);
 
-    std::vector<std::string> weights = {};
-    Map map = createNoise(order, 20, weights=weights);
+    std::vector<std::string> weights_list = {};
+    Map map = createNoise(order, 20, weights_list, 1, 5);
     //Map map = Slope(order, 20);
     //std::cout << map[0][-1];
     writeToFile(map);
@@ -81,7 +89,7 @@ Map postProcess(Map map) {
     for (auto const & row : map){
         double m = row.max_size();
         if (m > 5*mean){
-            m == max;
+            m = max;
         }
         else if (m > max){
             max = m;
@@ -129,33 +137,64 @@ Map vectorItemMult(Map vec1, Map vec2, double scalar) {
     return vecproduct;
 }
 
-Map createNoise(int order, int range, std::vector<std::string> weights, int vector_size) {
-    Map noise_map;
+Map createNoise(int order, int range, std::vector<std::string> weights, int vector_size, int threads) {
+
+    if (threads > order){
+        threads = order;
+    }
+
+    Map noise_map = createEmptyMap(order);
     Vectormap vec = createVecMap(order, vector_size);
 
-    double n;
+    // double n;
 
-    for (int x = 0; x < order; x++) {
-        std::vector<double> row;
-        for (int y = 0; y < order; y++) {
-            n = 0;
-            for (int i = -range; i <= range; i++) {
-                for (int j = -range; j <= range; j++) {
-                    if (x+i >= order || x+i < 0 || y+j >= order || y+j < 0) {
-                        double f1 = randomGen.randomDoubleRange(-vector_size, vector_size);
-                        double f2 = sqrt(pow(vector_size, 2) - pow(f1, 2))*randomGen.randomNegative();
-                        std::vector<double> f = { f1, f2 };
-                        n += vector_size * 0.5 - 1 *dotProduct(f, vec[x][y]);
-                    }
-                    else{
-                        n += vector_size * 0.5 - 1 * dotProduct(vec[x][y], vec[(x+i)][(y+j)]);
-                    }
-                }
-            }
-            row.push_back(n);
-        }
-        noise_map.push_back(row);
+    // for (int x = 0; x < order; x++) {
+    //     std::vector<double> row;
+    //     for (int y = 0; y < order; y++) {
+    //         n = 0;
+    //         for (int i = -range; i <= range; i++) {
+    //             for (int j = -range; j <= range; j++) {
+    //                 if (x+i >= order || x+i < 0 || y+j >= order || y+j < 0) {
+    //                     double f1 = randomGen.randomDoubleRange(-vector_size, vector_size);
+    //                     double f2 = sqrt(pow(vector_size, 2) - pow(f1, 2))*randomGen.randomNegative();
+    //                     std::vector<double> f = { f1, f2 };
+    //                     n += vector_size * 0.5 - 1 *dotProduct(f, vec[x][y]);
+    //                 }
+    //                 else{
+    //                     n += vector_size * 0.5 - 1 * dotProduct(vec[x][y], vec[(x+i)][(y+j)]);
+    //                 }
+    //             }
+    //         }
+    //         row.push_back(n);
+    //     }
+    //     noise_map.push_back(row);
+    // }
+
+    /*int start = 0;
+    int end = order/threads;
+    std::vector<std::thread> thread_list;
+    std::cout << order/threads << std::endl;
+
+    for (int i=0; i < threads; i++){
+        int index[2] = {start, end};
+        std::thread thread1 (createNoiseRow, order, range, vector_size, index, vec);
+        thread_list.push_back(std::move(thread1));
+        start = end+1;
+        end =  start+(order/threads);
+        std::cout << "Thread started: " << i << ", Start: " << start << ", End: " << end << std::endl;
     }
+
+    std::cout << "\n-------------\n";
+
+;    for (int i=0; i < threads; i++){
+        thread_list[i].join();
+        std::cout << "Thread Finished: " << i << std::endl;
+    }
+
+    for (int i = 0; i<threads; i++){
+        noise_map[threadingstore[i].index] = threadingstore[i].row;
+    }*/
+
     Map weightmap = createEmptyMap(order, 1.0);
     for (auto& tag : weights) {
         // ADD WEIGHTMAP STATEMENTS HERE:
@@ -187,4 +226,33 @@ bool writeToFile(Map map) {
         return true;
     }
     return false;
+}
+
+void createNoiseRow(int order, int range, int vector_size, int index[2], Vectormap vec){
+    std::lock_guard<std::mutex> guard(myMutex);
+    double n;
+    std::vector<double> row;
+    for (int x = index[0]; x <= index[1]; x++){
+        ThreadingStore thrd;
+        thrd.index = x;
+        for (int y = 0; y < order; y++) {
+            n = 0;
+            for (int i = -range; i <= range; i++) {
+                for (int j = -range; j <= range; j++) {
+                    if (x+i >= order || x+i < 0 || y+j >= order || y+j < 0) {
+                        double f1 = randomGen.randomDoubleRange(-vector_size, vector_size);
+                        double f2 = sqrt(pow(vector_size, 2) - pow(f1, 2))*randomGen.randomNegative();
+                        std::vector<double> f = { f1, f2 };
+                        n += vector_size * 0.5 - 1 *dotProduct(f, vec[x][y]);
+                    }
+                    else{
+                        n += vector_size * 0.5 - 1 * dotProduct(vec[x][y], vec[(x+i)][(y+j)]);
+                    }
+                }
+            }
+        }
+        thrd.row = row;
+        threadingstore.push_back(thrd);
+    }
+    std::cout << "Thread Finished: " << index << std::endl;
 }
