@@ -125,7 +125,7 @@ Map Slope(int size, int depth) {
 
 Map vectorItemMult(Map vec1, Map vec2, double scalar) {
     if (vec1.size() != vec2.size() || vec1[0].size() != vec2[0].size()) {
-        std::cout << "VECTORS ARENT SAME SIZE";
+        std::cout << "vectorItemMult: VECTORS ARENT SAME SIZE\n";
         return createEmptyMap(vec1.size(), 0);
     }
     Map vecproduct = createEmptyMap(vec1.size());
@@ -146,54 +146,71 @@ Map createNoise(int order, int range, std::vector<std::string> weights, int vect
     Map noise_map = createEmptyMap(order);
     Vectormap vec = createVecMap(order, vector_size);
 
-    // double n;
+    double n;
 
-    // for (int x = 0; x < order; x++) {
-    //     std::vector<double> row;
-    //     for (int y = 0; y < order; y++) {
-    //         n = 0;
-    //         for (int i = -range; i <= range; i++) {
-    //             for (int j = -range; j <= range; j++) {
-    //                 if (x+i >= order || x+i < 0 || y+j >= order || y+j < 0) {
-    //                     double f1 = randomGen.randomDoubleRange(-vector_size, vector_size);
-    //                     double f2 = sqrt(pow(vector_size, 2) - pow(f1, 2))*randomGen.randomNegative();
-    //                     std::vector<double> f = { f1, f2 };
-    //                     n += vector_size * 0.5 - 1 *dotProduct(f, vec[x][y]);
-    //                 }
-    //                 else{
-    //                     n += vector_size * 0.5 - 1 * dotProduct(vec[x][y], vec[(x+i)][(y+j)]);
-    //                 }
-    //             }
-    //         }
-    //         row.push_back(n);
-    //     }
-    //     noise_map.push_back(row);
-    // }
+    /*for (int x = 0; x < order; x++) {
+        std::vector<double> row;
+        for (int y = 0; y < order; y++) {
+            n = 0;
+            for (int i = -range; i <= range; i++) {
+                 for (int j = -range; j <= range; j++) {
+                    if (x+i >= order || x+i < 0 || y+j >= order || y+j < 0) {
+                        double f1 = randomGen.randomDoubleRange(-vector_size, vector_size);
+                        double f2 = sqrt(pow(vector_size, 2) - pow(f1, 2))*randomGen.randomNegative();
+                        std::vector<double> f = { f1, f2 };
+                        n += vector_size * 0.5 - 1 *dotProduct(f, vec[x][y]);
+                    }
+                    else{
+                        n += vector_size * 0.5 - 1 * dotProduct(vec[x][y], vec[(x+i)][(y+j)]);
+                    }
+                 }
+            }
+            row.push_back(n);
+        }
+        noise_map.push_back(row);
+    }*/
 
-    /*int start = 0;
-    int end = order/threads;
+    int difference = order / threads;
+    int end = order;
+    int start = order - difference + 1;
     std::vector<std::thread> thread_list;
-    std::cout << order/threads << std::endl;
 
-    for (int i=0; i < threads; i++){
-        int index[2] = {start, end};
-        std::thread thread1 (createNoiseRow, order, range, vector_size, index, vec);
-        thread_list.push_back(std::move(thread1));
-        start = end+1;
-        end =  start+(order/threads);
+    /*for (int i=0; i < threads; i++){
         std::cout << "Thread started: " << i << ", Start: " << start << ", End: " << end << std::endl;
+        int index[2] = {start, end};
+        thread_list.push_back(std::move(std::thread(createNoiseRow, order, range, vector_size, index, vec)));
+        start = end+1;
+        end = start+(order/threads);
+        if (end > order) {
+            end = order;
+        }
+        
+    }*/
+
+    int index[2];
+
+    while (start >= 0) {
+        std::cout << "Thread started-> " << ", Start: " << start << ", End: " << end << std::endl;
+        index[0] = start;
+        index[1] = end;
+        thread_list.push_back(std::move(std::thread(createNoiseRow, order, range, vector_size, index, vec)));
+        end -= difference;
+        start -= difference;
     }
+    index[0] = 0;
+    index[1] = end;
+    thread_list.push_back(std::move(std::thread(createNoiseRow, order, range, vector_size, index, vec)));
 
     std::cout << "\n-------------\n";
-
-;    for (int i=0; i < threads; i++){
-        thread_list[i].join();
-        std::cout << "Thread Finished: " << i << std::endl;
+    std::cout << thread_list.size() << " " << threads <<  std::endl;
+    for (int th = threads; th >= 0; th--) {
+        thread_list[th].join();
+        std::cout << thread_list.size() << std::endl;
     }
 
-    for (int i = 0; i<threads; i++){
+    for (int i = 0; i<=threads; i++){
         noise_map[threadingstore[i].index] = threadingstore[i].row;
-    }*/
+    }
 
     Map weightmap = createEmptyMap(order, 1.0);
     for (auto& tag : weights) {
@@ -206,7 +223,7 @@ Map createNoise(int order, int range, std::vector<std::string> weights, int vect
         }
     }
     noise_map = (vectorItemMult(weightmap, noise_map));
-    noise_map = postProcess(noise_map);
+    //noise_map = postProcess(noise_map);
 
     return noise_map;
 }
@@ -232,8 +249,9 @@ void createNoiseRow(int order, int range, int vector_size, int index[2], Vectorm
     std::lock_guard<std::mutex> guard(myMutex);
     double n;
     std::vector<double> row;
+    ThreadingStore thrd;
+    
     for (int x = index[0]; x <= index[1]; x++){
-        ThreadingStore thrd;
         thrd.index = x;
         for (int y = 0; y < order; y++) {
             n = 0;
@@ -250,9 +268,11 @@ void createNoiseRow(int order, int range, int vector_size, int index[2], Vectorm
                     }
                 }
             }
+            row.push_back(n);
+            //std::cout << row << "row\n";
         }
         thrd.row = row;
         threadingstore.push_back(thrd);
     }
-    std::cout << "Thread Finished: " << index << std::endl;
+    std::cout << "Thread Finished: " << index[0] << " " << index[1] << std::endl;
 }

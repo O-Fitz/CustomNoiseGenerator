@@ -23,7 +23,7 @@ Map createNoise(int order, int range=10, std::vector<std::string> weights={}, in
 double getMean(Map map);
 Vectormap createVecMap(int order, int vec_size=1);
 double dotProduct(std::vector<double> v1, std::vector<double> v2);
-Map createEmptyMap(int size, double filler = 1);
+Map createEmptyMap(int size, double filler = 0);
 Map postProcess(Map map);
 Map Slope(int size, int depth = 1);
 Map vectorItemMult(Map vec1, Map vec2, double scalar = 1);
